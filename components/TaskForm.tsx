@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Task, TaskInput } from '@/types/task';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,23 @@ export function TaskForm({
   );
   const [color, setColor] = useState(initialTask?.color || COLOR_PALETTE[0]);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (initialTask) {
+      setTitle(initialTask.title);
+      setStartTime(convertMinutesToTime(initialTask.start_time));
+      setEndTime(convertMinutesToTime(initialTask.end_time));
+      setColor(initialTask.color);
+    } else {
+      setTitle('');
+      setStartTime('09:00');
+      setEndTime('10:00');
+      setColor(COLOR_PALETTE[0]);
+    }
+    setError('');
+  }, [initialTask, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
