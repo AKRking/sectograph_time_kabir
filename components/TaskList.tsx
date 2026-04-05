@@ -3,6 +3,7 @@
 import { Task } from '@/types/task';
 import { getDisplayTime } from '@/lib/time';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Trash2, CreditCard as Edit2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -21,6 +22,12 @@ interface TaskListProps {
   onDelete: (id: string) => Promise<void>;
   isLoading?: boolean;
 }
+
+const CATEGORY_BADGE_CLASS: Record<string, string> = {
+  work: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
+  break: 'bg-amber-100 text-amber-700 hover:bg-amber-100',
+  outside: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
+};
 
 export function TaskList({ tasks, onEdit, onDelete, isLoading }: TaskListProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -46,7 +53,7 @@ export function TaskList({ tasks, onEdit, onDelete, isLoading }: TaskListProps) 
 
   return (
     <>
-      <div className="space-y-2">
+      <div className="max-h-96 overflow-y-auto pr-1 space-y-2">
         {tasks.map((task) => (
           <div
             key={task.id}
@@ -62,6 +69,19 @@ export function TaskList({ tasks, onEdit, onDelete, isLoading }: TaskListProps) 
                 <p className="text-sm text-slate-500">
                   {getDisplayTime(task.start_time)} - {getDisplayTime(task.end_time)}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {task.project && (
+                    <span className="text-xs text-slate-600 truncate">Project: {task.project}</span>
+                  )}
+                  {task.category && (
+                    <Badge
+                      variant="secondary"
+                      className={`capitalize ${CATEGORY_BADGE_CLASS[task.category] || ''}`}
+                    >
+                      {task.category}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
 

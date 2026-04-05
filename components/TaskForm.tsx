@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Task, TaskInput } from '@/types/task';
+import { TASK_CATEGORIES, Task, TaskCategory, TaskInput } from '@/types/task';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { convertTimeToMinutes, convertMinutesToTime } from '@/lib/time';
 
 const COLOR_PALETTE = [
@@ -39,6 +40,7 @@ export function TaskForm({
   initialTask,
   isLoading,
 }: TaskFormProps) {
+  const todayISO = new Date().toISOString().slice(0, 10);
   const [title, setTitle] = useState(initialTask?.title || '');
   const [startTime, setStartTime] = useState(
     initialTask ? convertMinutesToTime(initialTask.start_time) : '09:00'
@@ -46,6 +48,9 @@ export function TaskForm({
   const [endTime, setEndTime] = useState(
     initialTask ? convertMinutesToTime(initialTask.end_time) : '10:00'
   );
+  const [project, setProject] = useState(initialTask?.project || '');
+  const [category, setCategory] = useState<TaskCategory>(initialTask?.category || 'work');
+  const [date, setDate] = useState(initialTask?.date || todayISO);
   const [color, setColor] = useState(initialTask?.color || COLOR_PALETTE[0]);
   const [error, setError] = useState('');
 
@@ -56,15 +61,21 @@ export function TaskForm({
       setTitle(initialTask.title);
       setStartTime(convertMinutesToTime(initialTask.start_time));
       setEndTime(convertMinutesToTime(initialTask.end_time));
+      setProject(initialTask.project || '');
+      setCategory(initialTask.category || 'work');
+      setDate(initialTask.date || todayISO);
       setColor(initialTask.color);
     } else {
       setTitle('');
       setStartTime('09:00');
       setEndTime('10:00');
+      setProject('');
+      setCategory('work');
+      setDate(todayISO);
       setColor(COLOR_PALETTE[0]);
     }
     setError('');
-  }, [initialTask, open]);
+  }, [initialTask, open, todayISO]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,11 +100,17 @@ export function TaskForm({
         start_time: startMinutes,
         end_time: endMinutes,
         color,
+        project: project.trim() || undefined,
+        category,
+        date,
       });
 
       setTitle('');
       setStartTime('09:00');
       setEndTime('10:00');
+      setProject('');
+      setCategory('work');
+      setDate(todayISO);
       setColor(COLOR_PALETTE[0]);
       onOpenChange(false);
     } catch (err) {
@@ -106,6 +123,9 @@ export function TaskForm({
       setTitle('');
       setStartTime('09:00');
       setEndTime('10:00');
+      setProject('');
+      setCategory('work');
+      setDate(todayISO);
       setColor(COLOR_PALETTE[0]);
       setError('');
     }
@@ -131,6 +151,33 @@ export function TaskForm({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="project">Project (optional)</Label>
+            <Input
+              id="project"
+              value={project}
+              onChange={(e) => setProject(e.target.value)}
+              placeholder="Project name"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Select value={category} onValueChange={(value) => setCategory(value as TaskCategory)}>
+              <SelectTrigger id="category" disabled={isLoading}>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_CATEGORIES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item.charAt(0).toUpperCase() + item.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time</Label>
@@ -153,6 +200,17 @@ export function TaskForm({
                 disabled={isLoading}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              disabled={isLoading}
+            />
           </div>
 
           <div className="space-y-2">

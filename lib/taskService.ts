@@ -6,6 +6,7 @@ export async function fetchTasks(): Promise<Task[]> {
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
+      .order('date', { ascending: true, nullsFirst: true })
       .order('start_time', { ascending: true });
 
     if (error) throw error;
@@ -26,6 +27,9 @@ export async function createTask(taskInput: TaskInput): Promise<Task | null> {
           start_time: taskInput.start_time,
           end_time: taskInput.end_time,
           color: taskInput.color,
+          project: taskInput.project,
+          category: taskInput.category,
+          date: taskInput.date,
         },
       ])
       .select()
@@ -48,6 +52,9 @@ export async function updateTask(id: string, taskInput: TaskInput): Promise<Task
         start_time: taskInput.start_time,
         end_time: taskInput.end_time,
         color: taskInput.color,
+        project: taskInput.project,
+        category: taskInput.category,
+        date: taskInput.date,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
