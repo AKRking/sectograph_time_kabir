@@ -332,7 +332,9 @@ export default function Home() {
             <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs uppercase tracking-wide text-slate-500">Digital clock</span>
-                <span className="font-mono text-lg font-semibold text-slate-900">{currentTimeText}</span>
+                {/* <span className="font-mono text-lg font-semibold text-slate-900">{currentTimeText}</span> */}
+                <span className="font-mono text-lg font-semibold text-slate-900">{formatClockDuration(remainingSeconds)}</span>
+                {/* <span>Left {formatClockDuration(remainingSeconds)}</span> */}
               </div>
               {currentTask ? (
                 <div className="space-y-2">
