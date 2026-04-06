@@ -16,6 +16,9 @@ import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
+
 const generateSoftColor = () => {
   const hue = Math.floor(Math.random() * 360);
   return `hsl(${hue} 70% 78%)`;
