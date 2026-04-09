@@ -8,8 +8,12 @@ import { Label } from '@/components/ui/label';
 import { ProjectTimerButton } from '@/components/ProjectTimerButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createProject, fetchProjects, ProjectRecord, updateProject } from '@/lib/projectService';
-
-const ACTIVE_SESSION_STORAGE_KEY = 'sectograph-active-session-v1';
+import {
+  clearActiveProjectSession,
+  fetchActiveProjectSession,
+  setActiveProjectSession,
+  subscribeToActiveProjectSession,
+} from '@/lib/projectTimerSessionService';
 
 type Project = ProjectRecord;
 
@@ -46,7 +50,6 @@ export function ProjectTimerGrid({ onSessionComplete }: ProjectTimerGridProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
-  const [hasLoadedActiveSession, setHasLoadedActiveSession] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [isAdding, setIsAdding] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -78,31 +81,46 @@ export function ProjectTimerGrid({ onSessionComplete }: ProjectTimerGridProps) {
   }, []);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
-      if (!stored) return;
+    let isMounted = true;
+    const loadActiveSession = async () => {
+      const fetchedSession = await fetchActiveProjectSession();
+      if (!isMounted) return;
 
-      const parsed = JSON.parse(stored) as ActiveSession;
-      if (!parsed || typeof parsed.projectId !== 'string' || typeof parsed.startedAt !== 'string') return;
+      if (!fetchedSession) {
+        setActiveSession(null);
+        return;
+      }
 
-      setActiveSession(parsed);
-    } catch {
-      // Ignore malformed values and start with no active session.
-    } finally {
-      setHasLoadedActiveSession(true);
-    }
+      setActiveSession({
+        projectId: fetchedSession.project_id,
+        startedAt: fetchedSession.started_at,
+      });
+    };
+
+    loadActiveSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
-    if (!hasLoadedActiveSession) return;
+    const unsubscribe = subscribeToActiveProjectSession((nextSession) => {
+      if (!nextSession) {
+        setActiveSession(null);
+        return;
+      }
 
-    if (!activeSession) {
-      localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
-      return;
-    }
+      setActiveSession({
+        projectId: nextSession.project_id,
+        startedAt: nextSession.started_at,
+      });
+    });
 
-    localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, JSON.stringify(activeSession));
-  }, [activeSession, hasLoadedActiveSession]);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
@@ -115,6 +133,7 @@ export function ProjectTimerGrid({ onSessionComplete }: ProjectTimerGridProps) {
     const projectStillExists = projects.some((project) => project.id === activeSession.projectId);
     if (!projectStillExists) {
       setActiveSession(null);
+      void clearActiveProjectSession();
     }
   }, [activeSession, projects]);
 
@@ -166,7 +185,10 @@ export function ProjectTimerGrid({ onSessionComplete }: ProjectTimerGridProps) {
 
     setIsSaving(false);
     if (saved) {
-      setActiveSession(null);
+      const cleared = await clearActiveProjectSession();
+      if (cleared) {
+        setActiveSession(null);
+      }
     }
 
     return saved;
@@ -185,9 +207,16 @@ export function ProjectTimerGrid({ onSessionComplete }: ProjectTimerGridProps) {
       if (!stopped) return;
     }
 
-    setActiveSession({
+    const startedAtIso = new Date().toISOString();
+    const syncedSession = await setActiveProjectSession({
       projectId: project.id,
-      startedAt: new Date().toISOString(),
+      startedAt: startedAtIso,
+    });
+    if (!syncedSession) return;
+
+    setActiveSession({
+      projectId: syncedSession.project_id,
+      startedAt: syncedSession.started_at,
     });
   };
 
