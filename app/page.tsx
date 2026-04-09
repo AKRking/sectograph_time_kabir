@@ -5,6 +5,7 @@ import { ClockDial } from '@/components/ClockDial';
 import { TaskForm } from '@/components/TaskForm';
 import { TaskList } from '@/components/TaskList';
 import { WeekCalendar } from '@/components/WeekCalendar';
+import { ProjectSessionPayload, ProjectTimerGrid } from '@/components/ProjectTimerGrid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -285,6 +286,65 @@ export default function Home() {
     }
   };
 
+  const handleProjectSessionComplete = async ({
+    project,
+    startedAt,
+    endedAt,
+    elapsedSeconds,
+  }: ProjectSessionPayload): Promise<boolean> => {
+    const startDateISO = format(startedAt, 'yyyy-MM-dd');
+    const endDateISO = format(endedAt, 'yyyy-MM-dd');
+
+    if (startDateISO !== endDateISO) {
+      toast({
+        title: 'Session not saved',
+        description: 'Cross-midnight sessions are not supported yet. Stop before midnight.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    const startMinutes = startedAt.getHours() * 60 + startedAt.getMinutes();
+    const roundedDurationMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60));
+    const endMinutes = startMinutes + roundedDurationMinutes;
+
+    if (startMinutes >= 1439 || endMinutes >= 1440) {
+      toast({
+        title: 'Session not saved',
+        description: 'Session ended too close to midnight to fit in today.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    const taskInput: TaskInput = {
+      title: project.name,
+      start_time: startMinutes,
+      end_time: endMinutes,
+      color: project.color,
+      project: project.name,
+      category: 'work',
+      date: startDateISO,
+    };
+
+    const created = await createTask(taskInput);
+    if (!created) {
+      toast({
+        title: 'Error',
+        description: 'Failed to auto-save timer session',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    setTasks((prev) => sortTasks([...prev, created]));
+    toast({
+      title: 'Task saved',
+      description: `${project.name} • ${formatClockDuration(elapsedSeconds)}`,
+    });
+    return true;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
       <div className="max-w-7xl mx-auto">
@@ -316,6 +376,9 @@ export default function Home() {
                 onSelectTime={handleDialStartSelection}
                 onTaskClick={handleEdit}
               />
+            </div>
+            <div className="mt-6">
+              <ProjectTimerGrid onSessionComplete={handleProjectSessionComplete} />
             </div>
           </div>
 
